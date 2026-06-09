@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Topic Roulette</title>
+<style>
+body {
+    font-family: Arial;
+    text-align: center;
+    background: #111;
+    color: white;
+    padding: 20px;
+}
+
+h1 {
+    color: #ff4444;
+}
+
+input, button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 5px;
+}
+
+button {
+    cursor: pointer;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+#result {
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid #ff4444;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎲 Topic Roulette</h1>
+
+<input id="name" placeholder="Enter your name">
+<input id="number" type="number" min="1" max="7" placeholder="Pick number 1-7">
+<br>
+
+<button onclick="claim()">Claim Assignment</button>
+
+<div id="result"></div>
+
+<h2>📋 Claimed Numbers</h2>
+<div id="board"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+// 🔥 YOUR FIREBASE CONFIG
+const firebaseConfig = {
+apiKey: "AIzaSyCG4_WuIMWSaR58bA_0P_CA1jfv8ts480o",
+authDomain: "topic-roulette-7de50.firebaseapp.com",
+projectId: "topic-roulette-7de50",
+storageBucket: "topic-roulette-7de50.firebasestorage.app",
+messagingSenderId: "852683467119",
+appId: "1:852683467119:web:791b957650a181643a209a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// 🎯 Hidden assignments (randomized once per site load)
+const assignments = {
+  1: {easy:"PCs & Peripherals", medium:"Power & Cooling", hard:"TCP/IP & Ports"},
+  2: {easy:"Mobile Setup", medium:"BIOS/UEFI", hard:"Network Troubleshooting"},
+  3: {easy:"Windows Interfaces", medium:"Cabling & Wireless", hard:"IP Troubleshooting"},
+  4: {easy:"OS & Email", medium:"Cloud Computing", hard:"IAM & Encryption"},
+  5: {easy:"Change Mgmt", medium:"Printers", hard:"Linux CLI"},
+  6: {easy:"Windows Tools", medium:"Linux Basics", hard:"Security & DoS"},
+  7: {easy:"OS Upgrades", medium:"Mobile Security", hard:"Malware"}
+};
+
+// 🔥 CLAIM FUNCTION
+window.claim = async function () {
+  const name = document.getElementById("name").value;
+  const number = document.getElementById("number").value;
+
+  if (!name || !number) {
+    alert("Enter name and number");
+    return;
+  }
+
+  const ref = doc(db, "claims", number);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    alert("That number is already taken!");
+    return;
+  }
+
+  await setDoc(ref, {
+    name: name,
+    number: number,
+    time: Date.now()
+  });
+
+  const a = assignments[number];
+
+  document.getElementById("result").innerHTML = `
+    <h2>✅ Claimed!</h2>
+    <p><b>${name}</b> → Number ${number}</p>
+    <p>Easy: ${a.easy}</p>
+    <p>Medium: ${a.medium}</p>
+    <p>Hard: ${a.hard}</p>
+  `;
+};
+
+// 🔄 LIVE BOARD
+const board = document.getElementById("board");
+
+onSnapshot(
+  getFirestore(app).collection ? null : undefined
+);
+</script>
+
+<script type="module">
+// SIMPLE LIVE BOARD (correct Firestore version)
+import {
+  collection,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+const board = document.getElementById("board");
+
+onSnapshot(collection(getFirestore(), "claims"), (snapshot) => {
+  let html = "";
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    html += `<p>✔ ${data.name} → Number ${data.number}</p>`;
+  });
+
+  board.innerHTML = html || "No claims yet.";
+});
+</script>
+
+</body>
+</html>
