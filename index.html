@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spin the Wheel Assignment</title>
+<title>Topic Wheel (Bulletproof)</title>
 
 <style>
 body {
@@ -14,14 +14,12 @@ body {
     padding: 20px;
 }
 
-h1 {
-    color: #ff4444;
-}
+h1 { color: #ff4444; }
 
 #wheel {
     font-size: 120px;
     margin: 20px;
-    transition: transform 2s ease;
+    transition: transform 1.5s ease;
 }
 
 button {
@@ -39,16 +37,13 @@ button {
     margin-top: 20px;
     padding: 15px;
     border-radius: 10px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🎡 Spin the Wheel</h1>
+<h1>🎡 Topic Wheel (Fixed System)</h1>
 
 <div id="wheel">🎡</div>
 
@@ -58,14 +53,16 @@ button {
 <div id="board" class="card"></div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import {
   getFirestore,
   doc,
-  setDoc,
   getDoc,
-  collection,
-  onSnapshot
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  collection
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -80,81 +77,99 @@ appId: "1:852683467119:web:791b957650a181643a209a"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 👥 Names list
-const people = [
-"Person 1","Person 2","Person 3","Person 4","Person 5","Person 6","Person 7"
-];
-
-// 📦 same assignments as before
+// 🎯 FIXED TOPICS
 const assignments = {
-  1: {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
-  2: {easy:{num:8,name:"Mobile Setup"},medium:{num:3,name:"BIOS/UEFI"},hard:{num:6,name:"Network Troubleshooting"}},
-  3: {easy:{num:11,name:"Windows Interfaces"},medium:{num:4,name:"Cabling & Wireless"},hard:{num:14,name:"IP Troubleshooting"}},
-  4: {easy:{num:12,name:"OS & Email"},medium:{num:7,name:"Cloud Computing"},hard:{num:15,name:"IAM & Encryption"}},
-  5: {easy:{num:21,name:"Change Management"},medium:{num:9,name:"Printers"},hard:{num:17,name:"Linux CLI"}},
-  6: {easy:{num:13,name:"Windows Tools"},medium:{num:10,name:"Linux Basics"},hard:{num:18,name:"DoS & Vulnerabilities"}},
-  7: {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
+  "Person 1": {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
+  "Person 2": {easy:{num:8,name:"Mobile Setup"},medium:{num:3,name:"BIOS/UEFI"},hard:{num:6,name:"Network Troubleshooting"}},
+  "Person 3": {easy:{num:11,name:"Windows Interfaces"},medium:{num:4,name:"Cabling & Wireless"},hard:{num:14,name:"IP Troubleshooting"}},
+  "Person 4": {easy:{num:12,name:"OS & Email"},medium:{num:7,name:"Cloud Computing"},hard:{num:15,name:"IAM & Encryption"}},
+  "Person 5": {easy:{num:21,name:"Change Management"},medium:{num:9,name:"Printers"},hard:{num:17,name:"Linux CLI"}},
+  "Person 6": {easy:{num:13,name:"Windows Tools"},medium:{num:10,name:"Linux Basics"},hard:{num:18,name:"DoS & Vulnerabilities"}},
+  "Person 7": {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
 };
 
-let available = [...people];
+const stateRef = doc(db, "game", "state");
 
-// 🎡 SPIN FUNCTION
+// 🔥 INIT GAME STATE (ONLY ONCE)
+async function initGame() {
+    const snap = await getDoc(stateRef);
+
+    if (!snap.exists()) {
+        const people = Object.keys(assignments);
+
+        // shuffle
+        for (let i = people.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [people[i], people[j]] = [people[j], people[i]];
+        }
+
+        await setDoc(stateRef, {
+            order: people,
+            index: 0
+        });
+    }
+}
+
+await initGame();
+
+// 🎡 SPIN
 window.spin = async function () {
 
-  if (available.length === 0) {
-    alert("All people already assigned!");
-    return;
-  }
+    const wheel = document.getElementById("wheel");
+    wheel.style.transform = "rotate(1080deg)";
 
-  const wheel = document.getElementById("wheel");
-  wheel.style.transform = "rotate(1080deg)";
+    setTimeout(async () => {
 
-  setTimeout(async () => {
+        const snap = await getDoc(stateRef);
+        let data = snap.data();
 
-    const index = Math.floor(Math.random() * available.length);
-    const chosen = available.splice(index, 1)[0];
+        if (data.index >= data.order.length) {
+            alert("All assignments done!");
+            return;
+        }
 
-    // assign hidden number (1–7)
-    const number = people.indexOf(chosen) + 1;
+        const person = data.order[data.index];
+        const number = data.index + 1;
 
-    await setDoc(doc(db, "claims", number.toString()), {
-      name: chosen,
-      number: number,
-      time: Date.now()
-    });
+        await updateDoc(stateRef, {
+            index: data.index + 1
+        });
 
-    const a = assignments[number];
+        const a = assignments[person];
 
-    document.getElementById("result").innerHTML = `
-      <h2>🎉 ${chosen}</h2>
+        document.getElementById("result").innerHTML = `
+            <h2>🎉 ${person}</h2>
 
-      <h3>Easy</h3>
-      <p>Topic ${a.easy.num}: ${a.easy.name}</p>
+            <h3>Easy (Topic ${a.easy.num})</h3>
+            <p>${a.easy.name}</p>
 
-      <h3>Medium</h3>
-      <p>Topic ${a.medium.num}: ${a.medium.name}</p>
+            <h3>Medium (Topic ${a.medium.num})</h3>
+            <p>${a.medium.name}</p>
 
-      <h3>Hard</h3>
-      <p>Topic ${a.hard.num}: ${a.hard.name}</p>
-    `;
+            <h3>Hard (Topic ${a.hard.num})</h3>
+            <p>${a.hard.name}</p>
+        `;
 
-    wheel.style.transform = "rotate(0deg)";
-  }, 2000);
+        wheel.style.transform = "rotate(0deg)";
+
+    }, 1500);
 };
 
 // 📋 LIVE BOARD
-const board = document.getElementById("board");
+onSnapshot(collection(db, "game"), async () => {
 
-onSnapshot(collection(db, "claims"), (snapshot) => {
+    const snap = await getDoc(stateRef);
+    if (!snap.exists()) return;
 
-  let html = "<h3>📋 ASSIGNED</h3>";
+    const data = snap.data();
 
-  snapshot.forEach(doc => {
-    const d = doc.data();
-    html += `<p>✔ ${d.name} → ${d.number}</p>`;
-  });
+    let html = "<h3>📋 ASSIGNED ORDER</h3>";
 
-  board.innerHTML = html;
+    for (let i = 0; i < data.index; i++) {
+        html += `<p>✔ ${data.order[i]} → ${i + 1}</p>`;
+    }
+
+    document.getElementById("board").innerHTML = html;
 });
 
 </script>
