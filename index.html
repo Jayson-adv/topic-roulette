@@ -1,166 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Topic Wheel (Bulletproof)</title>
-
-<style>
-body {
-    font-family: Arial;
-    background: #0f0f0f;
-    color: white;
-    text-align: center;
-    padding: 20px;
-}
-
-h1 { color: #ff4444; }
-
-#wheel {
-    font-size: 120px;
-    margin: 20px;
-    transition: transform 1.5s ease;
-}
-
-button {
-    padding: 12px 20px;
-    font-size: 18px;
-    background: #ff4444;
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.card {
-    background: #1a1a1a;
-    margin-top: 20px;
-    padding: 15px;
-    border-radius: 10px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    text-align: left;
-}
-</style>
-</head>
-
-<body>
-
-<h1>🎡 Topic Wheel (Final Version)</h1>
-
-<div id="wheel">🎡</div>
-
-<button onclick="spin()">SPIN</button>
-
-<!-- RESULT BOX -->
-<div id="result" class="card"></div>
-
-<!-- LIVE BOARD (this is what you were asking about) -->
-<div id="liveBoard" class="card"></div>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  onSnapshot,
-  collection
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-
-const firebaseConfig = {
-apiKey: "AIzaSyCG4_WuIMWSaR58bA_0P_CA1jfv8ts480o",
-authDomain: "topic-roulette-7de50.firebaseapp.com",
-projectId: "topic-roulette-7de50",
-storageBucket: "topic-roulette-7de50.firebasestorage.app",
-messagingSenderId: "852683467119",
-appId: "1:852683467119:web:791b957650a181643a209a"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-const stateRef = doc(db, "game", "state");
-
-// 🎯 FIXED TOPICS
-const assignments = {
-  "Person 1": {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
-  "Person 2": {easy:{num:8,name:"Mobile Setup"},medium:{num:3,name:"BIOS/UEFI"},hard:{num:6,name:"Network Troubleshooting"}},
-  "Person 3": {easy:{num:11,name:"Windows Interfaces"},medium:{num:4,name:"Cabling & Wireless"},hard:{num:14,name:"IP Troubleshooting"}},
-  "Person 4": {easy:{num:12,name:"OS & Email"},medium:{num:7,name:"Cloud Computing"},hard:{num:15,name:"IAM & Encryption"}},
-  "Person 5": {easy:{num:21,name:"Change Management"},medium:{num:9,name:"Printers"},hard:{num:17,name:"Linux CLI"}},
-  "Person 6": {easy:{num:13,name:"Windows Tools"},medium:{num:10,name:"Linux Basics"},hard:{num:18,name:"DoS & Vulnerabilities"}},
-  "Person 7": {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
-};
-
-// 🔥 INIT GAME (shuffle once)
-async function initGame() {
-    const snap = await getDoc(stateRef);
-
-    if (!snap.exists()) {
-        const people = Object.keys(assignments);
-
-        for (let i = people.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [people[i], people[j]] = [people[j], people[i]];
-        }
-
-        await setDoc(stateRef, {
-            order: people,
-            index: 0
-        });
-    }
-}
-
-await initGame();
-
-// 🎡 SPIN FUNCTION
-window.spin = async function () {
-
-    const wheel = document.getElementById("wheel");
-    wheel.style.transform = "rotate(1080deg)";
-
-    setTimeout(async () => {
-
-        const snap = await getDoc(stateRef);
-        const data = snap.data();
-
-        if (data.index >= data.order.length) {
-            alert("All assigned!");
-            return;
-        }
-
-        const person = data.order[data.index];
-
-        await updateDoc(stateRef, {
-            index: data.index + 1
-        });
-
-        const a = assignments[person];
-
-        document.getElementById("result").innerHTML = `
-            <h2>🎉 ${person}</h2>
-
-            <h3>Easy</h3>
-            <p>Topic ${a.easy.num}: ${a.easy.name}</p>
-
-            <h3>Medium</h3>
-            <p>Topic ${a.medium.num}: ${a.medium.name}</p>
-
-            <h3>Hard</h3>
-            <p>Topic ${a.hard.num}: ${a.hard.name}</p>
-        `;
-
-        wheel.style.transform = "rotate(0deg)";
-
-    }, 1500);
-};
-
-// 📋 LIVE BOARD (THIS IS WHAT YOU ASKED FOR)
 onSnapshot(collection(db, "game"), async () => {
 
     const snap = await getDoc(stateRef);
@@ -168,28 +5,26 @@ onSnapshot(collection(db, "game"), async () => {
 
     const data = snap.data();
 
-    let html = "<h3>📋 ASSIGNED</h3>";
-    let full = "<h3>📜 FULL RESULTS</h3>";
+    let html = "<h3>📜 FINAL RESULTS</h3>";
 
-    for (let i = 0; i < data.index; i++) {
+    // go through ALL 7 people in correct order
+    for (let i = 0; i < data.order.length; i++) {
 
         const person = data.order[i];
         const a = assignments[person];
 
-        html += `<p>✔ ${person}</p>`;
-
-        full += `
-            <p>
-                <b>${person}</b> → 
-                ${a.easy.num}, ${a.medium.num}, ${a.hard.num}
-            </p>
-        `;
+        // if not yet assigned, show pending
+        if (i >= data.index) {
+            html += `<p>⏳ ${person} → Pending</p>`;
+        } else {
+            html += `
+                <p>
+                    ✔ <b>${person}</b> → 
+                    ${a.easy.num}, ${a.medium.num}, ${a.hard.num}
+                </p>
+            `;
+        }
     }
 
-    document.getElementById("liveBoard").innerHTML = html + full;
+    document.getElementById("liveBoard").innerHTML = html;
 });
-
-</script>
-
-</body>
-</html>
