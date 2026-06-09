@@ -2,13 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Topic Roulette</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin the Wheel Assignment</title>
+
 <style>
 body {
     font-family: Arial;
-    text-align: center;
-    background: #111;
+    background: #0f0f0f;
     color: white;
+    text-align: center;
     padding: 20px;
 }
 
@@ -16,44 +18,45 @@ h1 {
     color: #ff4444;
 }
 
-input, button {
-    padding: 10px;
-    font-size: 16px;
-    margin: 5px;
+#wheel {
+    font-size: 120px;
+    margin: 20px;
+    transition: transform 2s ease;
 }
 
 button {
-    cursor: pointer;
+    padding: 12px 20px;
+    font-size: 18px;
     background: #ff4444;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
+    cursor: pointer;
 }
 
-#result {
+.card {
+    background: #1a1a1a;
     margin-top: 20px;
-    padding: 20px;
-    border: 1px solid #ff4444;
+    padding: 15px;
+    border-radius: 10px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🎲 Topic Roulette</h1>
+<h1>🎡 Spin the Wheel</h1>
 
-<input id="name" placeholder="Enter your name">
-<input id="number" type="number" min="1" max="7" placeholder="Pick number 1-7">
-<br>
+<div id="wheel">🎡</div>
 
-<button onclick="claim()">Claim Assignment</button>
+<button onclick="spin()">SPIN</button>
 
-<div id="result"></div>
+<div id="result" class="card"></div>
+<div id="board" class="card"></div>
 
-<h2>📋 Claimed Numbers</h2>
-<div id="board"></div>
-
-<!-- Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
 import {
@@ -61,10 +64,10 @@ import {
   doc,
   setDoc,
   getDoc,
+  collection,
   onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-// 🔥 YOUR FIREBASE CONFIG
 const firebaseConfig = {
 apiKey: "AIzaSyCG4_WuIMWSaR58bA_0P_CA1jfv8ts480o",
 authDomain: "topic-roulette-7de50.firebaseapp.com",
@@ -77,79 +80,83 @@ appId: "1:852683467119:web:791b957650a181643a209a"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🎯 Hidden assignments (randomized once per site load)
+// 👥 Names list
+const people = [
+"Person 1","Person 2","Person 3","Person 4","Person 5","Person 6","Person 7"
+];
+
+// 📦 same assignments as before
 const assignments = {
-  1: {easy:"PCs & Peripherals", medium:"Power & Cooling", hard:"TCP/IP & Ports"},
-  2: {easy:"Mobile Setup", medium:"BIOS/UEFI", hard:"Network Troubleshooting"},
-  3: {easy:"Windows Interfaces", medium:"Cabling & Wireless", hard:"IP Troubleshooting"},
-  4: {easy:"OS & Email", medium:"Cloud Computing", hard:"IAM & Encryption"},
-  5: {easy:"Change Mgmt", medium:"Printers", hard:"Linux CLI"},
-  6: {easy:"Windows Tools", medium:"Linux Basics", hard:"Security & DoS"},
-  7: {easy:"OS Upgrades", medium:"Mobile Security", hard:"Malware"}
+  1: {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
+  2: {easy:{num:8,name:"Mobile Setup"},medium:{num:3,name:"BIOS/UEFI"},hard:{num:6,name:"Network Troubleshooting"}},
+  3: {easy:{num:11,name:"Windows Interfaces"},medium:{num:4,name:"Cabling & Wireless"},hard:{num:14,name:"IP Troubleshooting"}},
+  4: {easy:{num:12,name:"OS & Email"},medium:{num:7,name:"Cloud Computing"},hard:{num:15,name:"IAM & Encryption"}},
+  5: {easy:{num:21,name:"Change Management"},medium:{num:9,name:"Printers"},hard:{num:17,name:"Linux CLI"}},
+  6: {easy:{num:13,name:"Windows Tools"},medium:{num:10,name:"Linux Basics"},hard:{num:18,name:"DoS & Vulnerabilities"}},
+  7: {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
 };
 
-// 🔥 CLAIM FUNCTION
-window.claim = async function () {
-  const name = document.getElementById("name").value;
-  const number = document.getElementById("number").value;
+let available = [...people];
 
-  if (!name || !number) {
-    alert("Enter name and number");
+// 🎡 SPIN FUNCTION
+window.spin = async function () {
+
+  if (available.length === 0) {
+    alert("All people already assigned!");
     return;
   }
 
-  const ref = doc(db, "claims", number);
-  const snap = await getDoc(ref);
+  const wheel = document.getElementById("wheel");
+  wheel.style.transform = "rotate(1080deg)";
 
-  if (snap.exists()) {
-    alert("That number is already taken!");
-    return;
-  }
+  setTimeout(async () => {
 
-  await setDoc(ref, {
-    name: name,
-    number: number,
-    time: Date.now()
-  });
+    const index = Math.floor(Math.random() * available.length);
+    const chosen = available.splice(index, 1)[0];
 
-  const a = assignments[number];
+    // assign hidden number (1–7)
+    const number = people.indexOf(chosen) + 1;
 
-  document.getElementById("result").innerHTML = `
-    <h2>✅ Claimed!</h2>
-    <p><b>${name}</b> → Number ${number}</p>
-    <p>Easy: ${a.easy}</p>
-    <p>Medium: ${a.medium}</p>
-    <p>Hard: ${a.hard}</p>
-  `;
+    await setDoc(doc(db, "claims", number.toString()), {
+      name: chosen,
+      number: number,
+      time: Date.now()
+    });
+
+    const a = assignments[number];
+
+    document.getElementById("result").innerHTML = `
+      <h2>🎉 ${chosen}</h2>
+
+      <h3>Easy</h3>
+      <p>Topic ${a.easy.num}: ${a.easy.name}</p>
+
+      <h3>Medium</h3>
+      <p>Topic ${a.medium.num}: ${a.medium.name}</p>
+
+      <h3>Hard</h3>
+      <p>Topic ${a.hard.num}: ${a.hard.name}</p>
+    `;
+
+    wheel.style.transform = "rotate(0deg)";
+  }, 2000);
 };
 
-// 🔄 LIVE BOARD
+// 📋 LIVE BOARD
 const board = document.getElementById("board");
 
-onSnapshot(
-  getFirestore(app).collection ? null : undefined
-);
-</script>
+onSnapshot(collection(db, "claims"), (snapshot) => {
 
-<script type="module">
-// SIMPLE LIVE BOARD (correct Firestore version)
-import {
-  collection,
-  onSnapshot
-} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-
-const board = document.getElementById("board");
-
-onSnapshot(collection(getFirestore(), "claims"), (snapshot) => {
-  let html = "";
+  let html = "<h3>📋 ASSIGNED</h3>";
 
   snapshot.forEach(doc => {
-    const data = doc.data();
-    html += `<p>✔ ${data.name} → Number ${data.number}</p>`;
+    const d = doc.data();
+    html += `<p>✔ ${d.name} → ${d.number}</p>`;
   });
 
-  board.innerHTML = html || "No claims yet.";
+  board.innerHTML = html;
 });
+
 </script>
 
 </body>
