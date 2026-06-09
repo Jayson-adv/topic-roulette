@@ -37,20 +37,27 @@ button {
     margin-top: 20px;
     padding: 15px;
     border-radius: 10px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🎡 Topic Wheel (Fixed System)</h1>
+<h1>🎡 Topic Wheel (Final Version)</h1>
 
 <div id="wheel">🎡</div>
 
 <button onclick="spin()">SPIN</button>
 
+<!-- RESULT BOX -->
 <div id="result" class="card"></div>
-<div id="board" class="card"></div>
+
+<!-- LIVE BOARD (this is what you were asking about) -->
+<div id="liveBoard" class="card"></div>
 
 <script type="module">
 
@@ -77,6 +84,8 @@ appId: "1:852683467119:web:791b957650a181643a209a"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const stateRef = doc(db, "game", "state");
+
 // 🎯 FIXED TOPICS
 const assignments = {
   "Person 1": {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
@@ -88,16 +97,13 @@ const assignments = {
   "Person 7": {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
 };
 
-const stateRef = doc(db, "game", "state");
-
-// 🔥 INIT GAME STATE (ONLY ONCE)
+// 🔥 INIT GAME (shuffle once)
 async function initGame() {
     const snap = await getDoc(stateRef);
 
     if (!snap.exists()) {
         const people = Object.keys(assignments);
 
-        // shuffle
         for (let i = people.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [people[i], people[j]] = [people[j], people[i]];
@@ -112,7 +118,7 @@ async function initGame() {
 
 await initGame();
 
-// 🎡 SPIN
+// 🎡 SPIN FUNCTION
 window.spin = async function () {
 
     const wheel = document.getElementById("wheel");
@@ -121,15 +127,14 @@ window.spin = async function () {
     setTimeout(async () => {
 
         const snap = await getDoc(stateRef);
-        let data = snap.data();
+        const data = snap.data();
 
         if (data.index >= data.order.length) {
-            alert("All assignments done!");
+            alert("All assigned!");
             return;
         }
 
         const person = data.order[data.index];
-        const number = data.index + 1;
 
         await updateDoc(stateRef, {
             index: data.index + 1
@@ -140,14 +145,14 @@ window.spin = async function () {
         document.getElementById("result").innerHTML = `
             <h2>🎉 ${person}</h2>
 
-            <h3>Easy (Topic ${a.easy.num})</h3>
-            <p>${a.easy.name}</p>
+            <h3>Easy</h3>
+            <p>Topic ${a.easy.num}: ${a.easy.name}</p>
 
-            <h3>Medium (Topic ${a.medium.num})</h3>
-            <p>${a.medium.name}</p>
+            <h3>Medium</h3>
+            <p>Topic ${a.medium.num}: ${a.medium.name}</p>
 
-            <h3>Hard (Topic ${a.hard.num})</h3>
-            <p>${a.hard.name}</p>
+            <h3>Hard</h3>
+            <p>Topic ${a.hard.num}: ${a.hard.name}</p>
         `;
 
         wheel.style.transform = "rotate(0deg)";
@@ -155,7 +160,7 @@ window.spin = async function () {
     }, 1500);
 };
 
-// 📋 LIVE BOARD
+// 📋 LIVE BOARD (THIS IS WHAT YOU ASKED FOR)
 onSnapshot(collection(db, "game"), async () => {
 
     const snap = await getDoc(stateRef);
@@ -163,13 +168,25 @@ onSnapshot(collection(db, "game"), async () => {
 
     const data = snap.data();
 
-    let html = "<h3>📋 ASSIGNED ORDER</h3>";
+    let html = "<h3>📋 ASSIGNED</h3>";
+    let full = "<h3>📜 FULL RESULTS</h3>";
 
     for (let i = 0; i < data.index; i++) {
-        html += `<p>✔ ${data.order[i]} → ${i + 1}</p>`;
+
+        const person = data.order[i];
+        const a = assignments[person];
+
+        html += `<p>✔ ${person}</p>`;
+
+        full += `
+            <p>
+                <b>${person}</b> → 
+                ${a.easy.num}, ${a.medium.num}, ${a.hard.num}
+            </p>
+        `;
     }
 
-    document.getElementById("board").innerHTML = html;
+    document.getElementById("liveBoard").innerHTML = html + full;
 });
 
 </script>
