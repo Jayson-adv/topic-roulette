@@ -55,7 +55,7 @@ button {
 
 <div id="result" class="card"></div>
 
-<!-- FINAL RESULTS -->
+<!-- SIMPLE FINAL OUTPUT -->
 <div id="liveBoard" class="card"></div>
 
 <script type="module">
@@ -66,9 +66,7 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc,
-  onSnapshot,
-  collection
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -87,16 +85,16 @@ const stateRef = doc(db, "game", "state");
 
 // 🎯 FIXED TOPICS
 const assignments = {
-  "Person 1": {easy:{num:1,name:"PCs & Peripherals"},medium:{num:2,name:"Power & Cooling"},hard:{num:5,name:"TCP/IP & Ports"}},
-  "Person 2": {easy:{num:8,name:"Mobile Setup"},medium:{num:3,name:"BIOS/UEFI"},hard:{num:6,name:"Network Troubleshooting"}},
-  "Person 3": {easy:{num:11,name:"Windows Interfaces"},medium:{num:4,name:"Cabling & Wireless"},hard:{num:14,name:"IP Troubleshooting"}},
-  "Person 4": {easy:{num:12,name:"OS & Email"},medium:{num:7,name:"Cloud Computing"},hard:{num:15,name:"IAM & Encryption"}},
-  "Person 5": {easy:{num:21,name:"Change Management"},medium:{num:9,name:"Printers"},hard:{num:17,name:"Linux CLI"}},
-  "Person 6": {easy:{num:13,name:"Windows Tools"},medium:{num:10,name:"Linux Basics"},hard:{num:18,name:"DoS & Vulnerabilities"}},
-  "Person 7": {easy:{num:16,name:"OS Upgrades"},medium:{num:20,name:"Mobile Security"},hard:{num:19,name:"Malware"}}
+  "Person 1": [1, 2, 5],
+  "Person 2": [8, 3, 6],
+  "Person 3": [11, 4, 14],
+  "Person 4": [12, 7, 15],
+  "Person 5": [21, 9, 17],
+  "Person 6": [13, 10, 18],
+  "Person 7": [16, 20, 19]
 };
 
-// 🔥 INIT ONCE (creates random order)
+// 🔥 INIT ONCE
 async function initGame() {
     const snap = await getDoc(stateRef);
 
@@ -117,7 +115,7 @@ async function initGame() {
 
 await initGame();
 
-// 🎡 SPIN FUNCTION
+// 🎡 SPIN
 window.spin = async function () {
 
     const wheel = document.getElementById("wheel");
@@ -139,19 +137,9 @@ window.spin = async function () {
             index: data.index + 1
         });
 
-        const a = assignments[person];
-
         document.getElementById("result").innerHTML = `
             <h2>🎉 ${person}</h2>
-
-            <h3>Easy</h3>
-            <p>${a.easy.num}: ${a.easy.name}</p>
-
-            <h3>Medium</h3>
-            <p>${a.medium.num}: ${a.medium.name}</p>
-
-            <h3>Hard</h3>
-            <p>${a.hard.num}: ${a.hard.name}</p>
+            <p>Topics: ${assignments[person].join(", ")}</p>
         `;
 
         wheel.style.transform = "rotate(0deg)";
@@ -159,31 +147,25 @@ window.spin = async function () {
     }, 1500);
 };
 
-// 📜 FINAL RESULTS (THIS IS WHAT YOU WANTED)
-onSnapshot(collection(db, "game"), async () => {
+// 📜 SIMPLE FINAL LIST (THIS IS THE ONLY THING YOU WANTED)
+function render() {
+    getDoc(stateRef).then(snap => {
+        const data = snap.data();
+        if (!data) return;
 
-    const snap = await getDoc(stateRef);
-    if (!snap.exists()) return;
+        let html = "<h3>📜 FINAL RESULTS</h3>";
 
-    const data = snap.data();
+        for (let i = 0; i < data.index; i++) {
+            const person = data.order[i];
+            html += `<p>${person} got: ${assignments[person].join(", ")}</p>`;
+        }
 
-    let html = "<h3>📜 FINAL RESULTS</h3>";
+        document.getElementById("liveBoard").innerHTML = html;
+    });
+}
 
-    for (let i = 0; i < data.index; i++) {
-
-        const person = data.order[i];
-        const a = assignments[person];
-
-        html += `
-            <p>
-                <b>${person}</b> → 
-                ${a.easy.num}, ${a.medium.num}, ${a.hard.num}
-            </p>
-        `;
-    }
-
-    document.getElementById("liveBoard").innerHTML = html;
-});
+// refresh every spin
+setInterval(render, 1000);
 
 </script>
 
